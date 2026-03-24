@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+
+{% block title %}Detect Medicine - MedDetect{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold mb-3">Medicine Detection</h1>
+                <p class="lead text-muted">
+                    Upload an image or search by name to get comprehensive medicine information
+                </p>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-pills mb-4 justify-content-center" id="detectionTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="image-tab" data-bs-toggle="pill" data-bs-target="#image-tab-pane" type="button" role="tab">
+                        <i class="fas fa-camera me-2"></i>Image Upload
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="search-tab" data-bs-toggle="pill" data-bs-target="#search-tab-pane" type="button" role="tab">
+                        <i class="fas fa-search me-2"></i>Search by Name
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="detectionTabsContent">
+                <!-- Image Upload Tab -->
+                <div class="tab-pane fade show active" id="image-tab-pane" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body p-4">
+                            <div class="upload-area" id="uploadArea">
+                                <div class="mb-3">
+                                    <i class="fas fa-cloud-upload-alt text-primary" style="font-size: 3rem;"></i>
+                                </div>
+                                <h5 class="fw-bold mb-2">Upload Medicine Image</h5>
+                                <p class="text-muted mb-3">
+                                    Drag and drop your image here or click to browse
+                                </p>
+                                <input type="file" id="imageInput" accept="image/*" class="d-none">
+                                <button class="btn btn-primary" onclick="document.getElementById('imageInput').click()">
+                                    <i class="fas fa-upload me-2"></i>Choose File
+                                </button>
+                                <p class="text-muted mt-2 mb-0">
+                                    Supported formats: JPG, PNG, GIF (Max 10MB)
+                                </p>
+                            </div>
+                            
+                            <!-- Preview Area -->
+                            <div id="previewArea" class="text-center mt-4" style="display: none;">
+                                <img id="imagePreview" class="img-fluid rounded" style="max-height: 300px;">
+                                <div class="mt-3">
+                                    <button class="btn btn-primary" onclick="processImage()">
+                                        <i class="fas fa-search me-2"></i>Detect Medicine
+                                    </button>
+                                    <button class="btn btn-outline-secondary ms-2" onclick="resetUpload()">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Tab -->
+                <div class="tab-pane fade" id="search-tab-pane" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label for="medicineSearch" class="form-label fw-bold">Medicine Name</label>
+                                <input type="text" class="form-control form-control-lg" id="medicineSearch" 
+                                       placeholder="Enter medicine name (e.g., Paracetamol, Aspirin)">
+                                <div class="form-text">Start typing to see suggestions</div>
+                            </div>
+                            <button class="btn btn-primary btn-lg" onclick="searchMedicine()">
+                                <i class="fas fa-search me-2"></i>Search Medicine
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Section -->
+            <div class="loading" id="loadingSection">
+                <div class="spinner mb-3"></div>
+                <h5>Processing...</h5>
+                <p class="text-muted">Please wait while we analyze your request</p>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="fw-bold mb-4">
+                            <i class="fas fa-pills me-2 text-primary"></i>
+                            <span id="resultMedicineName"></span>
+                        </h3>
+                    </div>
+                </div>
+
+                <!-- Dataset Information -->
+                <div id="datasetInfo" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="fw-bold text-success mb-3">
+                                <i class="fas fa-database me-2"></i>Database Information
+                            </h5>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold text-primary">
+                                        <i class="fas fa-info-circle me-2"></i>Uses
+                                    </h6>
+                                    <p class="card-text" id="datasetUses"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold text-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Side Effects
+                                    </h6>
+                                    <p class="card-text" id="datasetSideEffects"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold text-info">
+                                        <i class="fas fa-shield-alt me-2"></i>Precautions
+                                    </h6>
+                                    <p class="card-text" id="datasetPrecautions"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold text-secondary">
+                                        <i class="fas fa-pills me-2"></i>Dosage
+                                    </h6>
+                                    <p class="card-text" id="datasetDosage"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Generated Information -->
+                <div id="aiInfo" style="display: none;">
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="fw-bold text-primary mb-3">
+                                <i class="fas fa-robot me-2"></i>AI Generated Information
+                            </h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="geminiInfo" class="text-muted"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Age-Based Dosage Recommendations -->
+                <div id="ageDosageInfo" style="display: none;">
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="fw-bold text-info mb-3">
+                                <i class="fas fa-users me-2"></i>Age-Based Dosage Recommendations
+                            </h5>
+                            <div class="row" id="ageDosageGrid">
+                                <!-- Age dosage cards will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Concise Guidance (bullets) -->
+                <div id="conciseSummary" class="mt-4" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-3"><i class="fas fa-list-ul me-2"></i>Quick Guidance</h5>
+                            <ul id="conciseList" class="mb-0"></ul>
+                            <p class="mt-3 mb-0 text-muted small">⚠️ This is general information and not a substitute for professional medical advice. Please consult a doctor for personalized guidance.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedFile = null;
+let medicines = [];
+
+// Load medicines for autocomplete
+async function loadMedicines() {
+    try {
+        const response = await fetch('/api/medicines');
+        const data = await response.json();
+        medicines = data.medicines || [];
+    } catch (error) {
+        console.error('Error loading medicines:', error);
+    }
+}
+
+// Initialize autocomplete
+function initializeAutocomplete() {
+    const searchInput = document.getElementById('medicineSearch');
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'autocomplete-suggestions';
+    suggestionsDiv.style.cssText = `
+        position: absolute;
+        background: white;
+        border: 1px solid #ddd;
+        border-top: none;
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 1000;
+        display: none;
+    `;
+    
+    searchInput.parentNode.style.position = 'relative';
+    searchInput.parentNode.appendChild(suggestionsDiv);
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        if (query.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+
+        const filtered = medicines.filter(medicine => 
+            medicine.toLowerCase().includes(query)
+        ).slice(0, 10);
+
+        if (filtered.length > 0) {
+            suggestionsDiv.innerHTML = filtered.map(medicine => 
+                `<div class="suggestion-item p-2 border-bottom" style="cursor: pointer;">${medicine}</div>`
+            ).join('');
+            suggestionsDiv.style.display = 'block';
+
+            // Add click handlers
+            suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    searchInput.value = this.textContent;
+                    suggestionsDiv.style.display = 'none';
+                });
+            });
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+}
+
+// File upload handling
+document.getElementById('imageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        selectedFile = file;
+        showPreview(file);
+    }
+});
+
+// Drag and drop functionality
+const uploadArea = document.getElementById('uploadArea');
+
+uploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        selectedFile = files[0];
+        showPreview(files[0]);
+    }
+});
+
+function showPreview(file) {
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('imagePreview').src = e.target.result;
+            document.getElementById('previewArea').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function resetUpload() {
+    selectedFile = null;
+    document.getElementById('imageInput').value = '';
+    document.getElementById('previewArea').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'none';
+}
+
+async function processImage() {
+    if (!selectedFile) {
+        showError('Please select an image first');
+        return;
+    }
+
+    showLoading();
+    hideResults();
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayResults(data);
+        } else {
+            showError(data.error || 'An error occurred while processing the image');
+        }
+    } catch (error) {
+        showError('Network error. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function searchMedicine() {
+    const medicineName = document.getElementById('medicineSearch').value.trim();
+    
+    if (!medicineName) {
+        showError('Please enter a medicine name');
+        return;
+    }
+
+    showLoading();
+    hideResults();
+
+    try {
+        const response = await fetch('/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ medicine_name: medicineName })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayResults(data);
+        } else {
+            showError(data.error || 'An error occurred while searching');
+        }
+    } catch (error) {
+        showError('Network error. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+function displayResults(data) {
+    document.getElementById('resultMedicineName').textContent = data.medicine_name;
+    
+    // Display dataset information if available
+    if (data.dataset_info) {
+        document.getElementById('datasetUses').textContent = data.dataset_info.uses || 'Not available';
+        document.getElementById('datasetSideEffects').textContent = data.dataset_info.side_effects || 'Not available';
+        document.getElementById('datasetPrecautions').textContent = data.dataset_info.precautions || 'Not available';
+        document.getElementById('datasetDosage').textContent = data.dataset_info.dosage || 'Not available';
+        document.getElementById('datasetInfo').style.display = 'block';
+    } else {
+        document.getElementById('datasetInfo').style.display = 'none';
+    }
+
+    // Display AI generated information
+    if (data.gemini_info && !data.gemini_info.startsWith('Error')) {
+        document.getElementById('geminiInfo').innerHTML = data.gemini_info.replace(/\n/g, '<br>');
+        document.getElementById('aiInfo').style.display = 'block';
+    } else {
+        document.getElementById('aiInfo').style.display = 'none';
+    }
+
+    // Display age-based dosage recommendations
+    if (data.age_dosages) {
+        displayAgeDosages(data.age_dosages);
+        document.getElementById('ageDosageInfo').style.display = 'block';
+    } else {
+        document.getElementById('ageDosageInfo').style.display = 'none';
+    }
+
+    // Concise guidance bullets
+    var concise = document.getElementById('conciseSummary');
+    var conciseList = document.getElementById('conciseList');
+    conciseList.innerHTML = '';
+    var bullets = [];
+    if (data && data.dataset_info && data.dataset_info.uses) {
+        bullets.push(`<li><strong>Use</strong>: ${data.dataset_info.uses}</li>`);
+    }
+    if (data && data.dosage_summary_three_groups) {
+        var d = data.dosage_summary_three_groups;
+        if (d.children_0_15) bullets.push(`<li><strong>Children (0–15)</strong>: ${d.children_0_15}</li>`);
+        if (d.young_adults_16_30) bullets.push(`<li><strong>Young adults (16–30)</strong>: ${d.young_adults_16_30}</li>`);
+        if (d.adults_31_plus) bullets.push(`<li><strong>Adults (31+)</strong>: ${d.adults_31_plus}</li>`);
+    }
+    if (bullets.length > 0) {
+        conciseList.innerHTML = bullets.join('');
+        concise.style.display = 'block';
+    } else {
+        concise.style.display = 'none';
+    }
+
+    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('errorMessage').style.display = 'none';
+}
+
+function displayAgeDosages(ageDosages) {
+    const ageDosageGrid = document.getElementById('ageDosageGrid');
+    ageDosageGrid.innerHTML = '';
+    
+    Object.entries(ageDosages).forEach(([ageGroup, dosageInfo]) => {
+        if (dosageInfo) {
+            const ageCard = document.createElement('div');
+            ageCard.className = 'col-lg-4 col-md-6 mb-3';
+            ageCard.innerHTML = `
+                <div class="card h-100 border-info">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user me-2"></i>${dosageInfo.age_group}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <strong class="text-primary">Dosage:</strong>
+                            <p class="mb-1 small">${dosageInfo.dosage}</p>
+                        </div>
+                        <div>
+                            <strong class="text-warning">Note:</strong>
+                            <p class="mb-0 small">${dosageInfo.note}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            ageDosageGrid.appendChild(ageCard);
+        }
+    });
+}
+
+function showLoading() {
+    document.getElementById('loadingSection').style.display = 'block';
+}
+
+function hideLoading() {
+    document.getElementById('loadingSection').style.display = 'none';
+}
+
+function showResults() {
+    document.getElementById('resultsSection').style.display = 'block';
+}
+
+function hideResults() {
+    document.getElementById('resultsSection').style.display = 'none';
+}
+
+function showError(message) {
+    document.getElementById('errorText').textContent = message;
+    document.getElementById('errorMessage').style.display = 'block';
+    document.getElementById('resultsSection').style.display = 'block';
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadMedicines();
+    initializeAutocomplete();
+});
+</script>
+{% endblock %} 

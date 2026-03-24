@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+
+{% block title %}Common Diseases - Medicine Detection System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center mb-5">
+                <h1 class="display-4 fw-bold text-primary mb-3">
+                    <i class="fas fa-stethoscope me-3"></i><span id="pageTitle">Common Diseases</span>
+                </h1>
+                <p class="lead text-muted" id="pageSubtitle">Select a disease to get recommended medicines and treatment information</p>
+                
+                <!-- Language Toggle -->
+                <div class="mt-4">
+                    <div class="btn-group" role="group" aria-label="Language selection">
+                        <input type="radio" class="btn-check" name="language" id="english" value="english" checked>
+                        <label class="btn btn-outline-primary" for="english">
+                            <i class="fas fa-language me-1"></i>English
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="language" id="marathi" value="marathi">
+                        <label class="btn btn-outline-primary" for="marathi">
+                            <i class="fas fa-language me-1"></i>मराठी
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="language" id="both" value="both">
+                        <label class="btn btn-outline-primary" for="both">
+                            <i class="fas fa-language me-1"></i>Both / दोन्ही
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disease Selection Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-search me-2"></i><span id="selectionHeaderTitle">Select Your Disease</span></h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <input id="diseaseSearch" class="form-control" type="text" placeholder="Search disease (English/Marathi)...">
+                            <div class="form-text" id="diseaseSearchHelp">You can type the disease name in English or Marathi</div>
+                        </div>
+                    </div>
+                    <div class="row" id="diseaseGrid">
+                        <!-- Disease cards will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="row" id="resultsSection" style="display: none;">
+        <div class="col-12">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-pills me-2"></i>
+                        <span id="selectedDiseaseName">Medicine Recommendations</span>
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Disease Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="text-primary"><i class="fas fa-info-circle me-2"></i><span id="diseaseInfoTitle">Disease Information</span></h5>
+                            <div id="diseaseInfo"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-primary"><i class="fas fa-exclamation-triangle me-2"></i><span id="symptomsTitle">Common Symptoms</span></h5>
+                            <div id="diseaseSymptoms"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recommended Medicines -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-prescription-bottle-medical me-2"></i><span id="recommendedTitle">Recommended Medicines</span>
+                            </h5>
+                            <div id="recommendedMedicines"></div>
+                            <!-- Concise guidance and disclaimer -->
+                            <div class="mt-4" id="conciseGuidance" style="display:none;">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-2"><i class="fas fa-list-ul me-2"></i><span id="quickGuidanceTitle">Quick Guidance</span></h6>
+                                        <ul id="guidanceList" class="mb-0"></ul>
+                                        <p class="mt-3 mb-0 text-muted small"><span id="disclaimerText">⚠️ This is general information and not a substitute for professional medical advice. Please consult a doctor for personalized guidance.</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="row" id="loadingSection" style="display: none;">
+        <div class="col-12 text-center">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading medicine recommendations...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Disease Card Template -->
+<template id="diseaseCardTemplate">
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 disease-card shadow-sm" style="cursor: pointer; transition: all 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="disease-icon mb-3">
+                    <i class="fas fa-disease fa-3x text-primary"></i>
+                </div>
+                <h5 class="card-title disease-name mb-2"></h5>
+                <h6 class="card-title disease-name-marathi mb-2" style="display: none;"></h6>
+                <p class="card-text disease-description text-muted small"></p>
+                <p class="card-text disease-description-marathi text-muted small" style="display: none;"></p>
+                <button class="btn btn-outline-primary btn-sm mt-2 select-disease-btn">
+                    <i class="fas fa-search me-1"></i><span class="btn-text">Get Recommendations</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Medicine Card Template -->
+<template id="medicineCardTemplate">
+    <div class="col-lg-6 col-md-12 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0 medicine-name text-primary"></h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-check-circle me-1"></i>Uses</h6>
+                        <p class="medicine-uses small"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Side Effects</h6>
+                        <p class="medicine-side-effects small"></p>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <h6 class="text-info"><i class="fas fa-shield-alt me-1"></i>Precautions</h6>
+                        <p class="medicine-precautions small"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-secondary"><i class="fas fa-clock me-1"></i>Dosage</h6>
+                        <p class="medicine-dosage small"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style>
+.disease-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.disease-icon {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.symptom-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    color: #1976d2;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    margin: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.medicine-card {
+    border-left: 4px solid var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .disease-card {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const diseases = {{ diseases | tojson }};
+    const diseaseGrid = document.getElementById('diseaseGrid');
+    const resultsSection = document.getElementById('resultsSection');
+    const loadingSection = document.getElementById('loadingSection');
+    const selectedDiseaseName = document.getElementById('selectedDiseaseName');
+    const diseaseInfo = document.getElementById('diseaseInfo');
+    const diseaseSymptoms = document.getElementById('diseaseSymptoms');
+    const recommendedMedicines = document.getElementById('recommendedMedicines');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    const selectionHeaderTitle = document.getElementById('selectionHeaderTitle');
+    const diseaseInfoTitle = document.getElementById('diseaseInfoTitle');
+    const symptomsTitle = document.getElementById('symptomsTitle');
+    const recommendedTitle = document.getElementById('recommendedTitle');
+    const diseaseSearch = document.getElementById('diseaseSearch');
+    const diseaseSearchHelp = document.getElementById('diseaseSearchHelp');
+    const quickGuidanceTitle = document.getElementById('quickGuidanceTitle');
+    const disclaimerText = document.getElementById('disclaimerText');
+
+    const diseaseIcons = {
+        'fever': 'fas fa-thermometer-half',
+        'headache': 'fas fa-brain',
+        'cough': 'fas fa-head-side-cough',
+        'cold': 'fas fa-snowflake',
+        'diarrhea': 'fas fa-toilet-paper',
+        'constipation': 'fas fa-toilet',
+        'allergies': 'fas fa-notes-medical',
+        'insomnia': 'fas fa-bed',
+        'acid_reflux': 'fas fa-fire',
+        'hypertension': 'fas fa-heartbeat'
+    };
+
+    let currentLanguage = 'english';
+    const diseaseEntries = Object.entries(diseases);
+
+    // Language change handler
+    document.querySelectorAll('input[name="language"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            currentLanguage = this.value;
+            setLanguageText();
+            updateLanguageDisplay();
+        });
+    });
+
+    function setLanguageText() {
+        if (currentLanguage === 'english') {
+            pageTitle.textContent = 'Common Diseases';
+            pageSubtitle.textContent = 'Select a disease to get recommended medicines and treatment information';
+            selectionHeaderTitle.textContent = 'Select Your Disease';
+            diseaseInfoTitle.textContent = 'Disease Information';
+            symptomsTitle.textContent = 'Common Symptoms';
+            recommendedTitle.textContent = 'Recommended Medicines';
+            diseaseSearch.placeholder = 'Search disease (English/Marathi)...';
+            diseaseSearchHelp.textContent = 'You can type the disease name in English or Marathi';
+            document.querySelectorAll('.select-disease-btn .btn-text').forEach(el => el.textContent = 'Get Recommendations');
+            quickGuidanceTitle.textContent = 'Quick Guidance';
+            disclaimerText.textContent = '⚠️ This is general information and not a substitute for professional medical advice. Please consult a doctor for personalized guidance.';
+        } else if (currentLanguage === 'marathi') {
+            pageTitle.textContent = 'सामान्य आजार';
+            pageSubtitle.textContent = 'शिफारस केलेली औषधे आणि उपचार माहिती मिळवण्यासाठी आपला आजार निवडा';
+            selectionHeaderTitle.textContent = 'आपला आजार निवडा';
+            diseaseInfoTitle.textContent = 'रोगाची माहिती';
+            symptomsTitle.textContent = 'सामान्य लक्षणे';
+            recommendedTitle.textContent = 'शिफारस केलेली औषधे';
+            diseaseSearch.placeholder = 'आजार शोधा (मराठी/English)...';
+            diseaseSearchHelp.textContent = 'आपण आजाराचे नाव मराठी किंवा इंग्रजीमध्ये टाइप करू शकता';
+            document.querySelectorAll('.select-disease-btn .btn-text').forEach(el => el.textContent = 'शिफारस पाहा');
+            quickGuidanceTitle.textContent = 'द्रुत मार्गदर्शन';
+            disclaimerText.textContent = '⚠️ ही सर्वसाधारण माहिती आहे. वैयक्तिक सल्ल्यासाठी कृपया डॉक्टरांचा सल्ला घ्या.';
+        } else if (currentLanguage === 'both') {
+            pageTitle.textContent = 'Common Diseases / सामान्य आजार';
+            pageSubtitle.textContent = 'Select a disease to get recommendations / शिफारसींसाठी आपला आजार निवडा';
+            selectionHeaderTitle.textContent = 'Select Your Disease / आपला आजार निवडा';
+            diseaseInfoTitle.textContent = 'Disease Information / रोगाची माहिती';
+            symptomsTitle.textContent = 'Common Symptoms / सामान्य लक्षणे';
+            recommendedTitle.textContent = 'Recommended Medicines / शिफारस केलेली औषधे';
+            diseaseSearch.placeholder = 'Search disease / आजार शोधा...';
+            diseaseSearchHelp.textContent = 'Type in English or Marathi / इंग्रजी किंवा मराठीत टाइप करा';
+            document.querySelectorAll('.select-disease-btn .btn-text').forEach(el => el.textContent = 'Get Recommendations / शिफारस पाहा');
+            quickGuidanceTitle.textContent = 'Quick Guidance / द्रुत मार्गदर्शन';
+            disclaimerText.textContent = '⚠️ This is general information and not a substitute for professional medical advice. Please consult a doctor for personalized guidance. / ⚠️ ही सर्वसाधारण माहिती आहे. वैयक्तिक सल्ल्यासाठी कृपया डॉक्टरांचा सल्ला घ्या.';
+        }
+    }
+
+    function updateLanguageDisplay() {
+        const cards = document.querySelectorAll('.disease-card');
+        cards.forEach(card => {
+            const name = card.querySelector('.disease-name');
+            const nameMarathi = card.querySelector('.disease-name-marathi');
+            const description = card.querySelector('.disease-description');
+            const descriptionMarathi = card.querySelector('.disease-description-marathi');
+
+            if (currentLanguage === 'english') {
+                name.style.display = 'block';
+                nameMarathi.style.display = 'none';
+                description.style.display = 'block';
+                descriptionMarathi.style.display = 'none';
+            } else if (currentLanguage === 'marathi') {
+                name.style.display = 'none';
+                nameMarathi.style.display = 'block';
+                description.style.display = 'none';
+                descriptionMarathi.style.display = 'block';
+            } else if (currentLanguage === 'both') {
+                name.style.display = 'block';
+                nameMarathi.style.display = 'block';
+                description.style.display = 'block';
+                descriptionMarathi.style.display = 'block';
+            }
+        });
+    }
+
+    function renderDiseaseCards(filterText = '') {
+        const q = (filterText || '').toLowerCase().trim();
+        diseaseGrid.innerHTML = '';
+
+        diseaseEntries.forEach(([key, disease]) => {
+            const nameEn = (disease.name || '').toLowerCase();
+            const nameMr = (disease.name_marathi || '').toLowerCase();
+            if (q && !(nameEn.includes(q) || nameMr.includes(q))) {
+                return;
+            }
+
+            const template = document.getElementById('diseaseCardTemplate');
+            const clone = template.content.cloneNode(true);
+
+            const card = clone.querySelector('.disease-card');
+            const icon = clone.querySelector('.disease-icon i');
+            const name = clone.querySelector('.disease-name');
+            const nameMarathi = clone.querySelector('.disease-name-marathi');
+            const description = clone.querySelector('.disease-description');
+            const descriptionMarathi = clone.querySelector('.disease-description-marathi');
+            const button = clone.querySelector('.select-disease-btn');
+
+            icon.className = diseaseIcons[key] || 'fas fa-disease';
+            name.textContent = disease.name;
+            nameMarathi.textContent = disease.name_marathi || '';
+            description.textContent = disease.description;
+            descriptionMarathi.textContent = disease.description_marathi || '';
+            button.addEventListener('click', () => selectDisease(key));
+
+            diseaseGrid.appendChild(clone);
+        });
+
+        setLanguageText();
+        updateLanguageDisplay();
+    }
+
+    diseaseSearch.addEventListener('input', function() {
+        renderDiseaseCards(this.value);
+    });
+
+    async function selectDisease(diseaseKey) {
+        try {
+            loadingSection.style.display = 'block';
+            resultsSection.style.display = 'none';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+
+            const response = await fetch('/disease_recommendations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ disease: diseaseKey })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get recommendations');
+            }
+
+            const data = await response.json();
+            displayResults(data);
+        } catch (error) {
+            console.error('Error:', error);
+            showError('Failed to load recommendations. Please try again.');
+        } finally {
+            loadingSection.style.display = 'none';
+        }
+    }
+
+    function displayResults(data) {
+        const disease = data.disease;
+        const medicines = data.recommended_medicines;
+
+        let diseaseNameText = disease.name;
+        if (currentLanguage === 'marathi' && disease.name_marathi) {
+            diseaseNameText = disease.name_marathi;
+        } else if (currentLanguage === 'both' && disease.name_marathi) {
+            diseaseNameText = `${disease.name} / ${disease.name_marathi}`;
+        }
+        selectedDiseaseName.textContent = diseaseNameText;
+
+        let descriptionText = disease.description;
+        if (currentLanguage === 'marathi' && disease.description_marathi) {
+            descriptionText = disease.description_marathi;
+        } else if (currentLanguage === 'both' && disease.description_marathi) {
+            descriptionText = `${disease.description}<br><em>${disease.description_marathi}</em>`;
+        }
+        diseaseInfo.innerHTML = `<p class="mb-2"><strong>Description:</strong> ${descriptionText}</p>`;
+
+        let symptomsArray = disease.symptoms;
+        if (currentLanguage === 'marathi' && disease.symptoms_marathi) {
+            symptomsArray = disease.symptoms_marathi;
+        } else if (currentLanguage === 'both' && disease.symptoms_marathi) {
+            symptomsArray = [...disease.symptoms, ...disease.symptoms_marathi];
+        }
+        diseaseSymptoms.innerHTML = symptomsArray.map(symptom => `<span class="symptom-tag">${symptom}</span>`).join('');
+
+        recommendedMedicines.innerHTML = '';
+        medicines.forEach((medicine, index) => {
+            const template = document.getElementById('medicineCardTemplate');
+            const clone = template.content.cloneNode(true);
+
+            let medicineName = medicine.name;
+            if (currentLanguage === 'marathi' && disease.medicines_marathi && disease.medicines_marathi[index]) {
+                medicineName = disease.medicines_marathi[index];
+            } else if (currentLanguage === 'both' && disease.medicines_marathi && disease.medicines_marathi[index]) {
+                medicineName = `${medicine.name} / ${disease.medicines_marathi[index]}`;
+            }
+
+            clone.querySelector('.medicine-name').textContent = medicineName;
+            clone.querySelector('.medicine-uses').textContent = medicine.uses || 'Information not available';
+            clone.querySelector('.medicine-side-effects').textContent = medicine.side_effects || 'Information not available';
+            clone.querySelector('.medicine-precautions').textContent = medicine.precautions || 'Information not available';
+            clone.querySelector('.medicine-dosage').textContent = medicine.dosage || 'Consult doctor for dosage';
+
+            recommendedMedicines.appendChild(clone);
+        });
+
+        // Concise guidance from first medicine
+        const conciseGuidance = document.getElementById('conciseGuidance');
+        const guidanceList = document.getElementById('guidanceList');
+        guidanceList.innerHTML = '';
+        const bullets = [];
+        if (medicines && medicines.length > 0) {
+            const first = medicines[0];
+            if (first.uses) {
+                bullets.push(`<li><strong>${currentLanguage === 'marathi' ? 'वापर' : 'Use'}</strong>: ${first.uses}</li>`);
+            }
+            if (first.dosage_summary_three_groups) {
+                const d = first.dosage_summary_three_groups;
+                if (d.children_0_15) bullets.push(`<li><strong>${currentLanguage === 'marathi' ? 'मुले (0–15)' : 'Children (0–15)'}</strong>: ${d.children_0_15}</li>`);
+                if (d.young_adults_16_30) bullets.push(`<li><strong>${currentLanguage === 'marathi' ? 'तरुण (16–30)' : 'Young adults (16–30)'}</strong>: ${d.young_adults_16_30}</li>`);
+                if (d.adults_31_plus) bullets.push(`<li><strong>${currentLanguage === 'marathi' ? 'प्रौढ (31+)' : 'Adults (31+)'}</strong>: ${d.adults_31_plus}</li>`);
+            }
+        }
+        if (bullets.length > 0) {
+            guidanceList.innerHTML = bullets.join('');
+            conciseGuidance.style.display = 'block';
+        } else {
+            conciseGuidance.style.display = 'none';
+        }
+
+        resultsSection.style.display = 'block';
+    }
+
+    function showError(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        const container = document.querySelector('.container-fluid');
+        container.insertBefore(alertDiv, container.firstChild);
+        setTimeout(() => { if (alertDiv.parentNode) { alertDiv.remove(); } }, 5000);
+    }
+
+    // Initialize the page
+    renderDiseaseCards();
+});
+</script>
+{% endblock %} 
